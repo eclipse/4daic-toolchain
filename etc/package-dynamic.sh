@@ -69,6 +69,7 @@ copy_libs() {
 		[ "$type" = "NEEDED" ] || continue
 		[ ! -f "$bindir/$lib" ] || continue
 		find "$toolchain" -name "$lib" -exec cp {} "$bindir/" ';'
+		find "$bindir/../../../lib" -name "$lib" -exec cp {} "$bindir/" ';'
 		copy_libs "$bindir/$lib"
 	done
 }
