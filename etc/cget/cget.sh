@@ -231,8 +231,10 @@ parse_package() {
 		parse_cmdline $args
 		unset args url
 		[ ! -f requirements.txt ] || pkg_depends="$PWD/requirements.txt"
-	elif [ -e "$pkg_url" ]; then
+	elif [ -d "$pkg_url" ]; then
 		pkg_url="$(abs "$pkg_url")"
+	elif [ -e "$pkg_url" ]; then
+		pkg_url="file:///$(abs "$pkg_url")"
 	else
 		case "$pkg_url" in
 			http://*|https://*|ftp://*) ;;
