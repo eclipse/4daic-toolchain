@@ -39,7 +39,8 @@
 # initialisation
 set -e
 toolchains="$(cd "$(dirname "$0")/.."; pwd)"
-toolchain="$toolchains/$1"
+arch="$1"
+toolchain="$toolchains/$arch"
 bin="$2"
 
 [ -f "$bin" -a -f "$toolchain.cmake" -a -d "$toolchain" ] || { echo "Usage: $0 <target> <binary>" >&2; exit 1; }
@@ -68,8 +69,8 @@ copy_libs() {
 	"$objdump" -p "$1" | while read type lib; do
 		[ "$type" = "NEEDED" ] || continue
 		[ ! -f "$bindir/$lib" ] || continue
-		find "$toolchain" -name "$lib" -exec cp {} "$bindir/" ';'
 		find "$bindir/../../../lib" -name "$lib" -exec cp {} "$bindir/" ';'
+		find "$toolchain/${arch%%-*}-buildroot-${arch#*-}/sysroot" -name "$lib" -exec cp {} "$bindir/" ';'
 		copy_libs "$bindir/$lib"
 	done
 }
@@ -90,13 +91,9 @@ patchelf --set-interpreter "./bundle/$interp" "$bin"
 
 cat << 'EOF' > "$bindir/../forte"
 #!/bin/sh
-rundir="$PWD"
-cd "$(dirname "$0")"
-if [ "$PWD" != "$rundir" ]; then
-	echo "Warning: This self-contained executable will be run from '$PWD'. If your program accesses files using relative paths, it may break." >&2
-fi
+export FORTE_RUNDIR="$PWD"
+cd "$(dirname "$(readlink "$0")")"
 unset LD_PRELOAD
-export LD_LIBRARY_PATH="$PWD/bundle"
 exec "$PWD/bundle/forte" "$@"
 EOF
 chmod 755 "$bindir/../forte"
