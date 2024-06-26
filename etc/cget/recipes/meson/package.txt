@@ -1,1 +1,1 @@
-mesonbuild/meson@0.57.1 -H sha256:0c043c9b5350e9087cd4f6becf6c0d10b1d618ca3f919e0dcca2cdf342360d5d -X build.cmake
+mesonbuild/meson@1.4.1 -H sha256:a7efc72ecb873c5a62031ade1921a7177b67cfdcb2e9410a7ab023f9e8192f4b -X build.cmake
