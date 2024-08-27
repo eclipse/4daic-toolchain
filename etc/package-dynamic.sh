@@ -92,7 +92,7 @@ patchelf --set-interpreter "./bundle/$interp" "$bin"
 cat << 'EOF' > "$bindir/../forte"
 #!/bin/sh
 export FORTE_RUNDIR="$PWD"
-cd "$(dirname "$(readlink "$0")")"
+cd "$(dirname "$(readlink -f "$0")")"
 unset LD_PRELOAD
 exec "$PWD/bundle/forte" "$@"
 EOF
