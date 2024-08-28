@@ -18,6 +18,10 @@ set(HAVE_POLL_FINE OFF CACHE BOOL "")
 set(KWSYS_LFS_WORKS OFF CACHE BOOL "")
 set(BUILD_TESTING OFF CACHE BOOL "")
 
+include(toolchain-utils)
+# misdetection on macos
+patch("${CMAKE_CURRENT_SOURCE_DIR}/Utilities/cmzlib/zutil.h" "ifndef fdopen" "if 0")
+
 include(${CGET_CMAKE_ORIGINAL_SOURCE_FILE})
 
 # evil hack, some compilers need this to link the curltest binary

@@ -22,6 +22,25 @@ if (WIN32)
 else()
   patch(${CMAKE_CURRENT_SOURCE_DIR}/.config "# CONFIG_PLATFORM_POSIX is not set" "CONFIG_PLATFORM_POSIX=y")
 endif()
+
+# Darwin fixes
+if (APPLE)
+	patch(${CMAKE_CURRENT_SOURCE_DIR}/include/platform.h "#if defined\\(__APPLE__\\)" "
+	#if defined(__APPLE__)
+	#undef HAVE_MEMRCHR
+	#undef HAVE_MEMPCPY
+	#define __bswap16 __builtin_bswap16
+	#define __bswap32 __builtin_bswap32
+	#define __bswap64 __builtin_bswap64
+	#define stime(x) (-1)
+	#define BB_GLOBAL_CONST 
+	#include <arpa/inet.h>
+	")
+	patch(${CMAKE_CURRENT_SOURCE_DIR}/coreutils/stat.c "human_time\\([^)]*tim\\)" "\"-\"")
+	patch(${CMAKE_CURRENT_SOURCE_DIR}/coreutils/touch.c "st_atim\\." "st_atimespec.")
+	patch(${CMAKE_CURRENT_SOURCE_DIR}/coreutils/touch.c "st_mtim\\." "st_mtimespec.")
+endif()
+
 execute_process(COMMAND make prepare CFLAGS=-DENABLE_PLATFORM_MINGW32=${WIN32} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} RESULT_VARIABLE RC)
 if (${RC} GREATER 0)
   message(FATAL_ERROR "Install failed")

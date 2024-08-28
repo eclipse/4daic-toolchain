@@ -336,6 +336,10 @@ find_library(CRYPTO crypto)
 include_directories(. compat/poll compat/regex)
 
 target_link_libraries(builtins PRIVATE gitlib ${ZLIB} pthread)
+if (APPLE)
+  link_libraries("-framework Security" "-framework CoreFoundation" "-framework SystemConfiguration")
+  add_definitions(-DHAVE_SYS_FILIO_H)
+endif()
 
 add_executable(git git.c common-main.c)
 target_link_libraries(git PRIVATE builtins)

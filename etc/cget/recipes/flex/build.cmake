@@ -41,7 +41,7 @@ set(AUTOTOOLS_CONFIGURE_OPTIONS
   "--disable-bootstrap"
   "--disable-nls"
   "--disable-shared")
-set(AUTOTOOLS_C_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}")
+set(AUTOTOOLS_C_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR} -Wno-int-conversion")
 set(AUTOTOOLS_TARGET "-C" "src")
 
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/src/flex${CMAKE_EXECUTABLE_SUFFIX} DESTINATION bin)

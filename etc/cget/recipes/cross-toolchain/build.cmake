@@ -23,7 +23,6 @@ set(TARGETS
   "arm-none-eabi,--enable-multilib --with-multilib-list=aprofile,rmprofile"
   "aarch64-linux-musl"
   "i686-linux-musl"
-  "x86_64-linux-muslx32"
   "x86_64-linux-musl"
   "riscv64-linux-musl"
   "riscv32-unknown-elf,--with-arch=rv32i --with-abi=ilp32" # FIXME: this may need to be rv32i_zicsr_zifencei, see https://github.com/riscv-collab/riscv-gnu-toolchain/issues/1315
@@ -73,8 +72,14 @@ endif()
 set(BUILDPREFIX "${TOOLCHAINS_ROOT}/${BUILD_ARCH}/bin/${BUILD_ARCH}-")
 set(BUILDPREFIX2 "${TOOLCHAINS_ROOT}/${BUILD_ARCH}/${BUILD_ARCH}/bin/")
 
+set(EXTRA_CFLAGS "")
+if (APPLE)
+	set(EXTRA_CFLAGS "-Dfdopen=fdopen")
+endif()
+
 # create config file
 file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/config.mak
+	#"COMPILER = CC='${ccache}${CMAKE_C_COMPILER}' CXX='${ccache}${CMAKE_CXX_COMPILER}'\n"
   "COMPILER = CC='${ccache}${CMAKE_C_COMPILER} -static --static' CXX='${ccache}${CMAKE_CXX_COMPILER} -static --static'\n"
   "BINUTILS_VER = 2.42\n"
   "GCC_VER = 13.2.0\n"
@@ -89,15 +94,18 @@ file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/config.mak
   "COMMON_CONFIG += CXX_FOR_BUILD=\"${BUILDPREFIX}g++ -static\"\n"
   "COMMON_CONFIG += CFLAGS_FOR_BUILD=-static\n"
   "COMMON_CONFIG += CXXFLAGS_FOR_BUILD=-static\n"
+  "COMMON_CONFIG += AR=\"${CMAKE_AR}\"\n"
+  "COMMON_CONFIG += RANLIB=\"${CMAKE_RANLIB}\"\n"
   "COMMON_CONFIG += LDFLAGS_FOR_BUILD=-static\n"
   "COMMON_CONFIG += LD_FOR_BUILD=${BUILDPREFIX2}ld\n"
   "COMMON_CONFIG += AR_FOR_BUILD=${BUILDPREFIX2}ar\n"
   "COMMON_CONFIG += RANLIB_FOR_BUILD=${BUILDPREFIX2}ranlib\n"
   # LTO doesn't work for cross-building
-  "COMMON_CONFIG += CFLAGS='${CMAKE_C_FLAGS} -fno-lto' CXXFLAGS='${CMAKE_CXX_FLAGS} -fno-lto' LDFLAGS='${CMAKE_EXE_LINKER_FLAGS} -fno-lto' $(COMPILER)\n"
+  "COMMON_CONFIG += CFLAGS='${CMAKE_C_FLAGS} ${EXTRA_CFLAGS} -fno-lto' CXXFLAGS='${CMAKE_CXX_FLAGS} ${EXTRA_CFLAGS} -fno-lto' LDFLAGS='${CMAKE_EXE_LINKER_FLAGS} -fno-lto' $(COMPILER)\n"
+  #"COMMON_CONFIG += CFLAGS='${CMAKE_C_FLAGS} -fno-lto -Dfdopen=fdopen' CXXFLAGS='${CMAKE_CXX_FLAGS} -fno-lto -Dfdopen=fdopen' LDFLAGS='${CMAKE_EXE_LINKER_FLAGS} -fno-lto' $(COMPILER)\n"
   "COMMON_CONFIG += --with-debug-prefix-map=$(CURDIR)= --disable-nls --disable-shared --enable-deterministic-archives\n"
   # the gprofng tool would add another dependency (bison), but gprofng isn't needed anyway
-  "COMMON_CONFIG += --disable-gprofng\n"
+  "COMMON_CONFIG += --disable-gprofng --disable-gcov\n"
   "GCC_CONFIG += --enable-languages=c,lto,c++ --disable-multilib $(MCPU)\n"
   "GCC_CONFIG += --enable-libatomic --enable-threads=posix --enable-graphite --enable-libstdcxx-filesystem-ts=yes --disable-libstdcxx-pch --disable-lto --disable-win32-registry --disable-symvers --disable-plugin --disable-werror --disable-rpath --with-gnu-as --with-gnu-ld --disable-sjlj-exceptions --with-dwarf2 --enable-large-address-aware\n"
   "DL_CMD = curl -Lk -o\n"
@@ -108,7 +116,7 @@ include(ProcessorCount)
 ProcessorCount(CPUS)
 # allow limiting the CPU count; notably, cross-building for windows has some unknown race condition
 if(NOT "$ENV{CROSS_TOOLCHAIN_CPUS}" STREQUAL "")
-	set(CPUS "$ENV{CROSS_TOOLCHAIN_CPUS}")
+  set(CPUS "$ENV{CROSS_TOOLCHAIN_CPUS}")
 endif()
 
 ##############################################################
@@ -180,11 +188,16 @@ foreach (ARCH IN LISTS TARGETS)
   string(REGEX REPLACE "^," "" MCPU "${MCPU}")
   string(REGEX REPLACE ",.*" "" ARCH "${ARCH}")
 
+  if (CMAKE_CROSSCOMPILING AND NOT EXISTS "${TOOLCHAINS_ROOT}/${ARCH}/bin")
+    message(FATAL_ERROR "\n\nMissing ${ARCH} toolchain for cross-compilation.")
+  endif()
+
   set(makecpus ${CPUS})
   if (ARCH MATCHES "mingw32")
     # some mingw toolchain versions have a race condition in parallel builds, set to 1 if you encounter this bug
     set(makecpus 1)
   endif()
+  if (NOT ARCH MATCHES "darwin")
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/.${ARCH}-installed
     DEPENDS patched-sources
@@ -222,6 +235,7 @@ foreach (ARCH IN LISTS TARGETS)
     DESTINATION .
     USE_SOURCE_PERMISSIONS
     MESSAGE_NEVER)
+  endif()
 
   install(FILES ${CGET_RECIPE_DIR}/toolchain.cmake
     DESTINATION . RENAME ${ARCH}.cmake)
