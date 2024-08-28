@@ -135,10 +135,11 @@ EOF
 build_busybox() {
 	! ( PATH="$PWD/bin"; type busybox 2>/dev/null; ) || return 0
 	msg "Building busybox..."
-	fetch_file busybox
+	# this is a known-good version, later versions fail mysteriously during boostrap
+	fetch_file 4e14b2a.tar.gz c401cd9aa500b36ef2e7cc5ea2d1286d88840e4069dd2a81219974ad65762d33 https://github.com/rmyorston/busybox-w32/archive/4e14b2a.tar.gz
 	tar xzf "$download"
 	cd busybox-w32-*
-	sh ../../etc/cget/recipes/busybox/build.sh ../bin
+	sh ../../etc/bootstrap/bootstrap-busybox.sh ../bin
 	cd ..
 	rm -r busybox-w32-*
 }
@@ -146,10 +147,10 @@ build_busybox() {
 build_make() {
 	! ( PATH="$PWD/bin"; type make 2>/dev/null; ) || return 0
 	msg "Building GNU make..."
-	fetch_file gnumake
+	fetch_file make-4.4.1.tar.gz dd16fb1d67bfab79a72f5e8390735c49e3e8e70b4945a15ab1f81ddb78658fb3 http://ftp.gnu.org/gnu/make/make-4.4.1.tar.gz
 	tar xzf "$download"
 	cd make-*
-	sh ../../etc/cget/recipes/gnumake/build.sh ../bin
+	sh ../../etc/bootstrap/bootstrap-gnumake.sh ../bin
 	cd ..
 	rm -rf make-*
 }
@@ -205,10 +206,10 @@ stage1() {
 	[ ! -x "$CXX" -a ! -x "$bootstrap/bin/g++" ] || return 0
 
 	msg "Downloading pre-built bootstrap compiler"
-	bootlin_version=bleeding-edge-2021.11-5
+	bootlin_version=bleeding-edge-2024.02-1
 	urlarch="${arch%-linux-musl}"
 	[ "$urlarch" = "x86_64" ] && urlarch="x86-64"
-	fetch_file gcc-"$arch".tgz 468e6b73146595923fe87980a30adb54cd78f4c1e2f228e1a2c9bb705ea4243d \
+	fetch_file gcc-"$arch".tgz 91bd25e7a649e2f2aae93bebf58b4e9f57fae8daf8bf7e573975348e0bc38890 \
 		"https://toolchains.bootlin.com/downloads/releases/toolchains/$urlarch/tarballs/$urlarch--musl--$bootlin_version.tar.bz2"
 	with_system_tools tar xf "$download" 2>/dev/null
 	with_system_tools mv "$urlarch--musl--$bootlin_version" compiler
@@ -295,6 +296,8 @@ stage2() {
 # build final toolchain environment using the common build script
 stage3() {
 	stage "Stage 3: final toolchain environment"
+	echo "include(\${CMAKE_CURRENT_LIST_DIR}/$arch.cmake)" > bootstrap/native-toolchain.cmake
+	echo "set(CMAKE_CROSSCOMPILING OFF)" >> bootstrap/native-toolchain.cmake
 	bootstrap/etc/bootstrap/bootstrap.sh "$arch" .
 	bin/cget init -t native-toolchain.cmake --ccache -DCMAKE_BUILD_TYPE=Release
 } 

@@ -31,7 +31,7 @@ compile() {
 		ext=""
 	fi
 
-	cp "$(dirname "$0")"/.config-bootstrap .config
+	cp "$(dirname "$0")"/busybox-config .config
 	make prepare
 
 	echo '#undef getdelim' >> include/xregex.h

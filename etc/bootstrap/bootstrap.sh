@@ -21,33 +21,40 @@
 
 set -e
 target="$1"
+if [ -z "$target" -o -n "${target##*-*-*}" ]; then
+	echo "Usage: $0 <host-triple> [<destdir>]" >&2
+	exit 1
+fi
+
 destdir="${2:-toolchain-$target}"
-destdir="$(cd "$(dirname "$destdir")"; pwd)/$(basename "$destdir")"
+mkdir -p "$destdir"
+destdir="$(cd "$destdir"; pwd)"
 
 cd "$(dirname "$0")/../.."
 
 toolchain="$PWD"
 cget() { "${toolchain}/bin/cget" "$@"; }
 
-if [ -z "$target" -o -n "${target##*-*-*}" ]; then
-	echo "Usage: $0 <host-triple> [<destdir>]" >&2
-	exit 1
-fi
-
 # build cross-toolchain if it doesn't exist yet
-if [ ! -d "$target" -o ! -f "$target.cmake" ]; then
+if [ ! -f "$target.cmake" ]; then
 	./etc/toolchain.sh "$1"
 fi
 
 # prepare target directory
-mkdir -p "$destdir"
 cd "$destdir"
 [ ! -d .cache ] && ln -sf "${toolchain}/.cache" .
 [ ! -d download-cache ] && ln -sf "${toolchain}/download-cache" .
 cp -a "${toolchain}/etc" .
 
+echo "include(\${CMAKE_CURRENT_LIST_DIR}/$target.cmake)" > "${destdir}/native-toolchain.cmake"
+echo "set(CMAKE_CROSSCOMPILING OFF)" >> "${destdir}/native-toolchain.cmake"
+
 # initialize cget
-cget init --ccache -t "${toolchain}/$target.cmake" -DCMAKE_BUILD_TYPE=Release
+if [ "$toolchain" = "$destdir/bootstrap" ]; then
+	cget init --ccache -t "${toolchain}/native-toolchain.cmake" -DCMAKE_BUILD_TYPE=Release
+else
+	cget init --ccache -t "${toolchain}/$target.cmake" -DCMAKE_BUILD_TYPE=Release
+fi
 
 # install native toolchain
 cget install cross-toolchain $builddir -DTARGETS="$target"
