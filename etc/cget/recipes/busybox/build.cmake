@@ -1,5 +1,4 @@
-#********************************************************************************
-# Copyright (c) 2018, 2023 OFFIS e.V.
+#********************************************************************************# Copyright (c) 2018, 2023 OFFIS e.V.
 #
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
@@ -36,6 +35,7 @@ add_executable(busybox
   applets/applets.c
   archival/bbunzip.c
   archival/bzip2.c
+  archival/chksum_and_xwrite_tar_header.c
   archival/cpio.c
   archival/dpkg_deb.c
   archival/gzip.c
@@ -88,7 +88,6 @@ add_executable(busybox
   coreutils/cut.c
   coreutils/date.c
   coreutils/dd.c
-  coreutils/df.c
   coreutils/dirname.c
   coreutils/dos2unix.c
   coreutils/du.c
@@ -171,18 +170,19 @@ add_executable(busybox
   libbb/compare_string_array.c
   libbb/concat_path_file.c
   libbb/concat_subpath_file.c
+  libbb/const_hack.c
   libbb/copy_file.c
   libbb/copyfd.c
   libbb/crc32.c
   libbb/default_error_retval.c
   libbb/device_open.c
   libbb/dump.c
+  libbb/duration.c
   libbb/endofname.c
   libbb/executable.c
   libbb/fclose_nonstdin.c
   libbb/fflush_stdout_and_exit.c
   libbb/fgets_str.c
-  libbb/find_mount_point.c
   libbb/find_pid_by_name.c
   libbb/find_root_device.c
   libbb/full_write.c
@@ -227,6 +227,7 @@ add_executable(busybox
   libbb/progress.c
   libbb/ptr_to_globals.c
   libbb/read.c
+  libbb/read_key.c
   libbb/read_printf.c
   libbb/recursive_action.c
   libbb/remove_file.c
@@ -241,7 +242,6 @@ add_executable(busybox
   libbb/simplify_path.c
   libbb/single_argv.c
   libbb/skip_whitespace.c
-  libbb/speed_table.c
   libbb/str_tolower.c
   libbb/strrstr.c
   libbb/sysconf.c
@@ -267,7 +267,7 @@ add_executable(busybox
   libbb/xrealloc_vector.c
   libbb/xregcomp.c
   libpwdgrp/uidgid_get.c
-  miscutils/dc.c
+  miscutils/bc.c
   miscutils/less.c
   miscutils/man.c
   miscutils/strings.c
@@ -276,12 +276,15 @@ add_executable(busybox
   networking/nc.c
   networking/parse_pasv_epsv.c
   networking/tls.c
+  networking/tls_fe.c
   networking/tls_aes.c
+  networking/tls_aesgcm.c
   networking/tls_pstm.c
   networking/tls_pstm_montgomery_reduce.c
   networking/tls_pstm_mul_comba.c
   networking/tls_pstm_sqr_comba.c
   networking/tls_rsa.c
+  networking/tls_sp_c32.c
   networking/wget.c
   networking/whois.c
   procps/kill.c
@@ -300,10 +303,11 @@ add_executable(busybox
   util-linux/hexdump_xxd.c
   util-linux/rev.c
   win32/regex.c # musl needs this as well
+  win32/match_class.c
 
   $<${notwin}:
+    libbb/speed_table.c
     libbb/makedev.c
-    libbb/read_key.c
     libbb/inode_hash.c
     libbb/signals.c>
 
@@ -321,10 +325,11 @@ add_executable(busybox
     win32/popen.c
     win32/process.c
     win32/select.c
-    win32/statfs.c
     win32/strptime.c
+    win32/strndup.c
     win32/system.c
     win32/termios.c
+    win32/timegm.c
     win32/uname.c
     win32/winansi.c
     >
@@ -362,6 +367,7 @@ patch(findutils/grep.c "getdelim(\\([^,]*,[^,]*,)[^,]*," "getline\\1")
 
 install(TARGETS busybox DESTINATION bin)
 
+if (NOT CMAKE_CROSSCOMPILING)
 install(CODE [=[
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/bin")
   execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/busybox" --install bin RESULT_VARIABLE RC)
@@ -384,3 +390,4 @@ install(CODE [=[
     message(FATAL_ERROR "Install failed")
   endif()
 ]=])
+endif()
