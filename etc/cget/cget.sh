@@ -47,9 +47,10 @@ exe="$cgetdir/${0##*/}"
 
 die() { set +e; cleanup; trap "" EXIT; echo "
 $exe: $*" >&2; exit 1; }
-trap 'exit="$?"; set +e; cleanup; [ "$exit" = 0 ] || die "Exiting due to error${pgkname:+ while processing $pkgname}"' EXIT
-trap 'set +e; cleanup; exit 1' INT TERM
-trap 'set +e; cleanup; exit 1' HUP PIPE IO USR1 USR2 2>/dev/null || true
+trap 'exit="$?"; set +e; cleanup; [ "$exit" = 0 ] || die "Exiting with exit status $exit due to error${pgkname:+ while processing $pkgname}"' EXIT
+trap 'set +e; echo "Exiting due to SIGINT, SIGHUP, or SIGTERM" >&2; cleanup; exit 1' INT TERM HUP
+trap 'set +e; echo "Exiting due to SIGPIPE, SIGIO, or SIGUSR" >&2; cleanup; exit 1' PIPE IO USR 2>/dev/null || true
+
 cleanup() { :; }
 msg() { echo "### $*"; }
 
@@ -69,7 +70,9 @@ is_windows() { [ "$(uname -s)" = "Windows_NT" ]; }
 sha256sum() { cmake -E sha256sum "$@"; }
 md5sum() { cmake -E md5sum "$@"; }
 extract() { cmake -E tar xf "$@"; }
-download() { cmake -Dfile="$1" -DURL="$2" -P "$exe"; }
+downloadfile() { curl -L -k -o "$1" "$2"; }
+# make bootstrapping easier
+type curl &> /dev/null || downloadfile() { cmake -Dfile="$1" -DURL="$2" -P "$exe"; }
 
 if is_windows; then
 	# on windows, sometimes some filesystem operations keep files locked after the corresponding program exited, so retry a few times.
@@ -85,7 +88,7 @@ else
 fi
 
 compiler_ver() {
-	cmake -DCOMPILERVER="$(echo ./CMakeFiles/*.*.*/CMakeCCompiler.cmake)" -P "$exe" 2>&1 | while read line; do
+	command cmake -DCOMPILERVER="$(echo ./CMakeFiles/*.*.*/CMakeCCompiler.cmake)" -P "$exe" 2>&1 | while read line; do
 		echo -n "$line";
 	done
 }
@@ -300,7 +303,7 @@ fetch_file() {
 		mkdir -p "${download%/*}"
 		msg "Downloading $3..."
 		rm -f "$download"
-		download "$download" "$3"
+		downloadfile "$download" "$3"
 	fi
 
 	if [ ! -s "$download" ]; then
@@ -345,7 +348,8 @@ prepare_source() {
 	mkdir -p "$pkgbuilddir/tmp"
 
 	if [ ! -d "$pkg_url" ]; then
-		fetch_file "${pkg_url##*/}" "$hash" "$pkg_url"
+		fn="${pkg_url%%\?*}"
+		fetch_file "${fn##*/}" "$hash" "$pkg_url"
 
 		msg "Extracting ${pkg_url##*/}..."
 		cd "$pkgbuilddir/tmp"
@@ -610,6 +614,5 @@ if (URL)
   file(DOWNLOAD "${URL}" "${file}" TLS_VERIFY OFF)
 else()
   include(${COMPILERVER})
-  execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -v)
   execute_process(COMMAND "${CMAKE_C_COMPILER}" -v)
 endif()
