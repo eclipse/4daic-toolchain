@@ -57,26 +57,31 @@ else
 fi
 
 # install native toolchain
-cget install cross-toolchain $builddir -DTARGETS="$target"
-echo "include(\${CMAKE_CURRENT_LIST_DIR}/$target.cmake)" > native-toolchain.cmake
-echo "set(CMAKE_CROSSCOMPILING OFF)" >> native-toolchain.cmake
-# The file native-toolchain.cmake is also expected in the bootstrap subdirectory for initial bootstrap scenarios 
-[ ! -d bootstrap ] || cp native-toolchain.cmake bootstrap/
-for i in gcc g++; do
-	echo '#!/bin/sh' > bin/"$i"
-	echo "exec \"\$(dirname \"\$0\")/../$target/bin/$target-$i\" -static \"\$@\"" >> bin/"$i"
-	chmod 755 bin/"$i"
-done
-for i in ld; do
-	echo '#!/bin/sh' > bin/"$i"
-	echo "exec \"\$(dirname \"\$0\")/../$target/$target/bin/$i\" -static \"\$@\"" >> bin/"$i"
-	chmod 755 bin/"$i"
-done
-for i in gcc-ar; do
-	echo '#!/bin/sh' > bin/"$i"
-	echo "exec \"\$(dirname \"\$0\")/../$target/bin/$target-$i\" \"\$@\"" >> bin/"$i"
-	chmod 755 bin/"$i"
-done
+if [ -z "${target%%*-apple-*}" ]; then
+	cget install clang-macos $builddir
+else
+	cget install cross-toolchain $builddir -DTARGETS="$target"
+fi
+
+mkdir -p bin
+if [ -n "${target%%*-apple-*}" ]; then
+	# Do not install laziness wrappers on clang-based platforms. If you need them, fix your build recipes.
+	for i in gcc g++; do
+		echo '#!/bin/sh' > bin/"$i"
+		echo "exec \"\$(dirname \"\$0\")/../$target/bin/$target-$i\" -static \"\$@\"" >> bin/"$i"
+		chmod 755 bin/"$i"
+	done
+	for i in ld; do
+		echo '#!/bin/sh' > bin/"$i"
+		echo "exec \"\$(dirname \"\$0\")/../$target/$target/bin/$i\" -static \"\$@\"" >> bin/"$i"
+		chmod 755 bin/"$i"
+	done
+	for i in gcc-ar; do
+		echo '#!/bin/sh' > bin/"$i"
+		echo "exec \"\$(dirname \"\$0\")/../$target/bin/$target-$i\" \"\$@\"" >> bin/"$i"
+		chmod 755 bin/"$i"
+	done
+fi
 
 # install cget wrapper
 cp etc/cget/wrapper bin/cget

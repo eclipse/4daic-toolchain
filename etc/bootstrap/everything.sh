@@ -21,7 +21,7 @@ cd "$(dirname "$0")/../.."
 {
 	./etc/bootstrap/initial.sh
 	./etc/toolchain.sh
-	for host in x86_64-w64-mingw32 aarch64-linux-musl; do
+	for host in x86_64-w64-mingw32 aarch64-apple-darwin20.2; do
 		./etc/bootstrap/bootstrap.sh "$host"
 		./toolchain-${host}/etc/toolchain.sh
 	done
