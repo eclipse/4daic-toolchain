@@ -14,6 +14,11 @@
 PROJECT(m4 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 
+include(toolchain-utils)
+if (APPLE)
+  patch("${CMAKE_CURRENT_SOURCE_DIR}/lib/obstack.c" "_Noreturn" "__attribute_noreturn__")
+endif()
+
 set(AUTOTOOLS_CONFIGURE_OPTIONS
   "--disable-threads"
   "--disable-assert"

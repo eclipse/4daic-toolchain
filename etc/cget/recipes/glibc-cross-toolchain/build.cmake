@@ -20,9 +20,9 @@ include(toolchain-utils)
 set(TARGETS "x86_64-linux-gnu;arm-linux-gnueabihf;aarch64-linux-gnu"
   CACHE STRING "Targets to download compilers for, e.g. x86_64-linux-gnu;arm-linux-gnueabihf")
 
-if (WIN32)
+if (WIN32 OR APPLE)
   message(FATAL_ERROR "\n\n===========================================================================\n"
-    "glibc-cross-toolchains are currently not supported on Windows\n"
+    "glibc-cross-toolchains are currently not supported on Windows or Apple\n"
     "===========================================================================\n\n")
 endif()
 ##############################################################

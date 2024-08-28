@@ -55,6 +55,10 @@ target_compile_definitions(make PRIVATE LIBDIR="${CGET_PREFIX}/lib")
 target_compile_definitions(make PRIVATE LOCALEDIR="")
 target_compile_definitions(make PRIVATE HAVE_CONFIG_H=1)
 
+if (APPLE)
+  target_compile_definitions(make PRIVATE -DST_MTIM_NSEC=st_mtimespec.tv_nsec)
+endif()
+
 if (WIN32)
   target_include_directories(make PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/w32/include)
   target_compile_definitions(make PRIVATE WINDOWS32)
