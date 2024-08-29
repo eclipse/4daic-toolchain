@@ -31,10 +31,14 @@ done
 
 targetarch="$1"
 [ ! -f "$targetarch.cmake" ] || exit 0
+case "$targetarch" in
+	*-unknown-* | *-apple-*) targetarch=clang;;
+esac
 
 baseurl="https://sourceforge.net/projects/fordiac/files/4diac-fbe"
 
 hostarch="$(uname -m)" # x86_64
+[ "$hostarch" != "arm64" ] || hostarch="aarch64"
 hostplatform="$(uname -s)" # Linux
 [ "$hostplatform" = "Windows_NT" ] && hostplatform=Windows
 file="${hostplatform}-cross-${hostarch}_${targetarch}.tar.lz"
@@ -63,6 +67,7 @@ while read hash url; do
         echo "Installing toolchain..."
         lzip -d < "$download" | tar x
         echo "Toolchain for $targetarch installed."
+        [ "$targetarch" != clang ] || ./clang-toolchain/bin/x86_64-apple-darwin*-clang --version
         exit 0
 done < etc/crosscompilers.sha256sum
 

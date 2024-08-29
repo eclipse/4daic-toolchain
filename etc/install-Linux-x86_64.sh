@@ -77,5 +77,7 @@ mkdir -p ".cache/sha256-$hash"
 mv "$file" ".cache/sha256-$hash/$file"
 rm -f *-toolchain-*.zip *-toolchain-*.tar.gz
 
+"$PWD"/bin/busybox --install $PWD/bin/ 
+
 echo "Installation complete. Run ./install-crosscompiler.sh to download additional cross-compiling toolchains."
 ./install-crosscompiler.sh || true

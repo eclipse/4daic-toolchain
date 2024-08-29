@@ -37,14 +37,16 @@ mkdir -p "$dist"
 
 detect_host() {
 	# build archive name from host and target platforms
-	host="$(sh "$base/cross-env.sh" native-toolchain.cmake set | grep "^CC=.*-gcc'\?\$")"
+	host="$(sh "$base/cross-env.sh" native-toolchain.cmake set | grep -E "^CC=.*-(gcc|clang)'?\$")"
 	host="${host##*/}"
 	host="${host%"'"}"
 	host="${host%-gcc}"
+	host="${host%-clang}"
 
 	case "$host" in
-		*-mingw32) hostos=Windows;;
-		*) hostos=Linux;;
+		*-mingw32) hostos=Windows; hostdir="$host";;
+		*-darwin*) hostos=Darwin; hostdir="clang-toolchain";;
+		*) hostos=Linux; hostdir="$host";;
 	esac
 
 	case "$hostos" in
@@ -54,11 +56,22 @@ detect_host() {
 			installarch="" # not used for windows, always x86_64
 			out="$dist/$hostos-toolchain-"$host".zip"
 			nativearch() { rm -f "$out"; 7za a -Tzip "$out" "$@"; }
+			hostcmake="$host.cmake"
 			excl="-xr!";;
+
+		Darwin)
+			out="$dist/$hostos-toolchain-"$host".tar.gz"
+			installarch="-${host%%-*}"
+			[ "$installarch" != "-aarch64" ] || installarch="-arm64"
+			nativearch() { rm -f "$out"; tar c "$@" | 7za a -Tgzip -si "$out"; }
+			hostcmake="$(echo *-apple*.cmake *-unknown-*-*.cmake)"
+			excl="--exclude=";;
+
 		*)
 			out="$dist/$hostos-toolchain-"$host".tar.gz"
 			installarch="-${host%%-*}"
 			nativearch() { rm -f "$out"; tar c "$@" | 7za a -Tgzip -si "$out"; }
+			hostcmake="$host.cmake"
 			excl="--exclude=";;
 	esac
 
@@ -91,6 +104,21 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 			echo "Skipping existing package for $target, use $0 $release -f to rebuild."
 		fi
 	done
+
+	rm -rf clang-toolchain/bootstrap clang-toolchain/lib/*.a
+	if [ -d clang-toolchain -a "$hostos" != "Darwin" ]; then
+		target=clang-toolchain
+		out="$dist/$hostos-cross-${host%%-*}_clang.tar.lz"
+		if [ ! -f "$out" -o "$1" = "-f" ]; then
+			(
+			echo "Packaging $target..."
+			tar c *-unknown-linux-*.cmake *-apple-*.cmake "$target" --exclude "MacOSX*.sdk" | lzip > "$out"
+			) &
+			pids="$pids $!"
+		else
+			echo "Skipping existing package for $target, use $0 $release -f to rebuild."
+		fi
+	fi
 done
 
 for id in $pids; do
@@ -118,7 +146,7 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 	echo "Packaging native $host toolchain and tools..."
 
 	cp "$base"/etc/install-*.* "$base/etc/crosscompilers.sha256sum" "etc" || true
-	nativearch ${excl}mingw-cross-toolchain ${excl}musl-cross-toolchain ${excl}glibc-cross-toolchain ${excl}.breakpoints bin lib libexec include cget/cget.cmake cget/pkg etc install-crosscompiler.* cross-env.sh *.md $host.cmake native-toolchain.cmake $host/ share
+	nativearch ${excl}"MacOSX*.sdk" ${excl}mingw-cross-toolchain ${excl}musl-cross-toolchain ${excl}glibc-cross-toolchain ${excl}.breakpoints bin lib libexec include cget/cget.cmake cget/pkg etc install-crosscompiler.* cross-env.sh *.md $hostcmake native-toolchain.cmake $hostdir/ share
 
 
 	hash="$(sha256sum "$out")"
