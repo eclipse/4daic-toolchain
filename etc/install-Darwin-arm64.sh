@@ -28,8 +28,8 @@ baseurl="https://sourceforge.net/projects/fordiac/files/4diac-fbe"
 triplet="$arch-apple-darwin20.2"
 file="$host-toolchain-$triplet.tar.gz"
 
-release='2024-04'
-hash='69dbd1f149bd86a25466ee9ba92d4d1734b6d34655dbf3303ec1607079e7abe5'
+release='2024-08'
+hash='f7a25d8ed4261467228d57207a4744d8bd9a40f60197de5f88e018ae323dc79d'
 
 
 sha256_check() {

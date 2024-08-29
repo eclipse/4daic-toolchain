@@ -18,8 +18,8 @@ if (Test-Path "cget\cget.sh") {
 
 if (-not (Test-Path "bin\sh.exe")) {
 	$baseurl = "https://sourceforge.net/projects/fordiac/files/4diac-fbe"
-	$release='2024-04'
-	$hash='4e70dd9e82104faae925e1d126d0f985763d894c3cce0cb7aa36e7fe4bb32807'
+	$release='2024-08'
+	$hash='74c5fa2e5c8f5ff2e48af89e3054917dec9ff140a2f7cfb2852c201ecf0eac86'
 	$download = "Windows-toolchain-x86_64-w64-mingw32.zip"
 
 	if (-not (Test-Path "$download")) {
