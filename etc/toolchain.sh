@@ -22,17 +22,22 @@ nativedir="${nativedir%/.cache}"
 
 # use defaults if no target given on the command line
 if [ "$#" = 0 ]; then
-	if [ -f bin/cmake.exe ]; then
-		# The windows toolchain does not support glibc variants
+	if grep -E -- '-apple-darwin|-w64-mingw32' native-toolchain.cmake; then
+		# add x86 linux toolchain, which is not part of the default set of cross-compilers
+		"${nativedir}/bin/cget" -p . install -U cross-toolchain -DTARGETS=x86_64-linux-musl
+		# omit glibc toolchain: non-linux toolchains do not support it
+		# omit clang: windows doesn't support it, on darwin it is the native toolchain
 		exec "${nativedir}/bin/cget" -p . install -U cross-toolchain
 	else
-		exec "${nativedir}/bin/cget" -p . install -U cross-toolchain glibc-cross-toolchain
+		exec "${nativedir}/bin/cget" -p . install -U cross-toolchain glibc-cross-toolchain clang-macos
 	fi
 fi
 
 # build the provided target(s)
 for i in "$@"; do
 	case "$i" in
+		*-apple-*) pkg="clang-macos";;
+		*-unknown-linux-*) pkg="clang";;
 		*-gnu*) pkg="glibc-cross-toolchain";;
 		*-*-*) pkg="cross-toolchain";;
 		*) echo "Unknown target: $i" >&2; exit 1;;
