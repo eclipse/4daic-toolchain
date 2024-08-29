@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #********************************************************************************
 # Copyright (c) 2018, 2024 OFFIS e.V.
 #
@@ -64,6 +64,8 @@ detect_host() {
 
 }
 
+pids=""
+
 # package cross-compilers first, so that we can build the SHA256 checksum file
 for toolchain in "$base" "$base"/toolchain-*/; do
 	[ -f "$toolchain/native-toolchain.cmake" ] || continue
@@ -80,12 +82,19 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 		target="${target##*/}"
 		out="$dist/$hostos-cross-${host%%-*}_$target.tar.lz"
 		if [ ! -f "$out" -o "$1" = "-f" ]; then
+			(
 			echo "Packaging $target..."
 			tar c "$target.cmake" "$target" | lzip > "$out"
+			) &
+			pids="$pids $!"
 		else
 			echo "Skipping existing package for $target, use $0 $release -f to rebuild."
 		fi
 	done
+done
+
+for id in $pids; do
+	wait -n $pids
 done
 
 # generate checksums to include them in base toolchain archive
@@ -99,9 +108,11 @@ for i in install-*.*; do
 	cp "$i" "$dist/4diac-toolchain-$release-$i"
 done
 
+pids=""
 # package base toolchains
 for toolchain in "$base" "$base"/toolchain-*/; do
 	[ -f "$toolchain/native-toolchain.cmake" ] || continue
+	(
 	cd "$toolchain"
 	detect_host
 	echo "Packaging native $host toolchain and tools..."
@@ -114,6 +125,12 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 	hash="${hash%% *}"
 
 	sed -i -e "s/release='.*'/release='$release'/;s/hash='[0-9a-f]\{64\}'/hash='$hash'/" "$dist/4diac-toolchain-$release-install-$hostos$installarch".*
+	) &
+	pids="$pids $!"
+done
+
+for id in $pids; do
+	wait -n $pids
 done
 
 # update installer scripts in base repo so that final checksums can be committed to git
