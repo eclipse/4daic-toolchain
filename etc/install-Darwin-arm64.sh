@@ -22,14 +22,25 @@ die() { echo "$*" >&2; exit 1; }
 
 host="$(uname -s)"
 arch="$(uname -m)"
+[ "$arch" != "arm64" ] || arch="aarch64"
 
 baseurl="https://sourceforge.net/projects/fordiac/files/4diac-fbe"
-triplet="x86_64-linux-musl"
+triplet="$arch-apple-darwin20.2"
 file="$host-toolchain-$triplet.tar.gz"
 
 release='2024-04'
 hash='69dbd1f149bd86a25466ee9ba92d4d1734b6d34655dbf3303ec1607079e7abe5'
 
+
+sha256_check() {
+	local download="$1" hash="$2"
+	if ! type shasum > /dev/null; then
+		echo "WARNING: sha256sum not found, not verifying archives."
+	elif [ "$(shasum -a 256 < "$download")" != "$hash  -" ]; then
+		mv "$download" "$download.broken"
+		die "SHA256 checksum for $download doesn't match expected value!"
+	fi
+}
 fetch_file_authenticated() {
 	download="$1"
 	url="$2"
@@ -61,21 +72,21 @@ EOF
 		fi
 	fi
 
-	if ! type sha256sum > /dev/null; then
-		echo "WARNING: sha256sum not found, not verifying archives."
-	elif [ "$(sha256sum < "$download")" != "$hash  -" ]; then
-		mv "$download" "$download.broken"
-		die "SHA256 checksum for $1 doesn't match expected value!"
-	fi
+	sha256_check "$download" "$hash"
 }
 
 fetch_file_authenticated "$file" "$baseurl/release-$release/$file/download" "$hash"
 [ -f "$file" ] || die "ERROR: Could not download $file. Please download it manually and put it into $PWD"
 
-gzip -d < "$file" | tar x --skip-old-files
+gzip -d < "$file" | tar x
 mkdir -p ".cache/sha256-$hash"
 mv "$file" ".cache/sha256-$hash/$file"
 rm -f *-toolchain-*.zip *-toolchain-*.tar.gz
+
+"$PWD"/bin/busybox --install "$PWD/bin"
+
+# Install SDK / message user about SDK installation
+clang-toolchain/bin/$arch-apple-darwin*-clang --version
 
 echo "Installation complete. Run ./install-crosscompiler.sh to download additional cross-compiling toolchains."
 ./install-crosscompiler.sh || true
