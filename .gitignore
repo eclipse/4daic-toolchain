@@ -15,7 +15,9 @@
 /*-w64-*
 /*-none-*
 /*-unknown-*
+/*-apple-*
 /*.cmake
+/clang-toolchain
 *.pyc
 /toolchains-*.tar.xz
 /toolchains.zip
