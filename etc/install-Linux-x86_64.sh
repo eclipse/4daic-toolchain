@@ -24,7 +24,7 @@ host="$(uname -s)"
 arch="$(uname -m)"
 
 baseurl="https://sourceforge.net/projects/fordiac/files/4diac-fbe"
-triplet="x86_64-linux-musl"
+triplet="$arch-linux-musl"
 file="$host-toolchain-$triplet.tar.gz"
 
 release='2024-04'
