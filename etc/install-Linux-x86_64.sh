@@ -28,7 +28,7 @@ triplet="$arch-linux-musl"
 file="$host-toolchain-$triplet.tar.gz"
 
 release='2024-08'
-hash='be29f14afa2d595e5fa44c49e874c02499ac18aaf627731ccfb2b2a966011489'
+hash='bf3e9d963f53b4da3ebe7b47ffc44c32050202b21d5be1d9b5ea4072e2811178'
 
 fetch_file_authenticated() {
 	download="$1"
