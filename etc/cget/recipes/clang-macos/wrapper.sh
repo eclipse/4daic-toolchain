@@ -54,8 +54,12 @@ while true; do
 	shift
 	case "$arg" in
 		--end-of-argument-list--) break;;
-		-static | --static) continue;;
+		-static | --static | -static-libgcc) continue;;
 		-flto | -ffat-lto-objects) continue;;
+		--sysroot=*) continue;;
+		-Wl,--start-group | -Wl,--end-group) continue;;
+		-Wl,-Map,* | -Wl,--warn-common) continue;;
+		-finline-limit=* | -falign-jumps=* | -falign-labels=*) continue;;
 	esac
 	set -- "$@" "$arg"
 done
