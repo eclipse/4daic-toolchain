@@ -29,7 +29,7 @@ triplet="$arch-apple-darwin20.2"
 file="$host-toolchain-$triplet.tar.gz"
 
 release='2024-08'
-hash='8bc630a66069b96bb8b878e13185747fdea6508e1f5d131a410063aa2280e25a'
+hash='a733e48569d35567d36c7adca06a5ca0d4f10269da269ed5aa5914103c16ad94'
 
 
 sha256_check() {
