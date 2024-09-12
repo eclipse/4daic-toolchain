@@ -38,7 +38,7 @@ if (-not (Test-Path "bin\sh.exe")) {
 	$shap = New-Object -com Shell.Application
 	$src = $shap.NameSpace("$PWD\$download")
 	$dest = $shap.NameSpace("$PWD\")
-	$dest.CopyHere($src.Items(), 0x10)
+	$dest.CopyHere($src.Items(), 0x510)
 
 	copy C:\Windows\system32\cmd.exe bin\cmd.exe
 	bin\busybox.exe --install bin\
