@@ -27,7 +27,6 @@ file(COPY ${CGET_RECIPE_DIR}/toolchain_defconfig DESTINATION ${CMAKE_CURRENT_SOU
 patch(${CMAKE_CURRENT_SOURCE_DIR}/configs/toolchain_defconfig "CROSS_COMPILER_PREFIX=\"\"" "CROSS_COMPILER_PREFIX=\"${TOOLCHAIN_ARCH}-\"")
 if (WIN32)
   patch(${CMAKE_CURRENT_SOURCE_DIR}/configs/toolchain_defconfig "# CONFIG_PLATFORM_MINGW32 is not set" "CONFIG_PLATFORM_MINGW32=y")
-  patch(findutils/grep.c "getdelim(\\([^,]*,[^,]*,)[^,]*," "getline\\1")
 
 else()
   patch(${CMAKE_CURRENT_SOURCE_DIR}/configs/toolchain_defconfig "# CONFIG_PLATFORM_POSIX is not set" "CONFIG_PLATFORM_POSIX=y")
@@ -37,6 +36,9 @@ else()
   patch(win32/regex.c "<regex.h>" "\"regex.h\"")
   patch(win32/Kbuild "lib-.*= regex.o" "lib-y += regex.o match_class.o")
 endif()
+
+# ENABLE_EXTRA_COMPAT breaks grep on windows, for feature parity disable it everywhere
+patch(findutils/grep.c "#include \"xregex.h\"" "#include \"xregex.h\"\n#define ENABLE_EXTRA_COMPAT 0\n#define IF_EXTRA_COMPAT(...)")
 
 if(APPLE)
   patch(${CMAKE_CURRENT_SOURCE_DIR}/configs/toolchain_defconfig "# CONFIG_PLATFORM_POSIX is not set" "CONFIG_PLATFORM_POSIX=y")
