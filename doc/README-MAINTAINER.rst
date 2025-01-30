@@ -42,7 +42,7 @@ the system they are running on.  They can be distributed in binary archives (but
 mind the licensing note below).
 
 To create base toolchain and cross-compiler archives, use script
-``etc/package.sh <release-tag>``.  It will package up the current toolchain
+``etc/bootstrap/package.sh <release-tag>``.  It will package up the current toolchain
 environment in the exact state it is in, with all the currently installed
 tools.  It will separate any cross-compilers into separate archives and
 different host systems in separate subdirectories.
