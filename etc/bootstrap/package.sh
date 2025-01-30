@@ -146,7 +146,7 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 	echo "Packaging native $host toolchain and tools..."
 
 	cp "$base"/etc/install-*.* "$base/etc/crosscompilers.sha256sum" "etc" || true
-	nativearch ${excl}"MacOSX*.sdk" ${excl}mingw-cross-toolchain ${excl}musl-cross-toolchain ${excl}glibc-cross-toolchain ${excl}.breakpoints bin lib libexec include cget/cget.cmake cget/pkg etc install-crosscompiler.* cross-env.sh *.md $hostcmake native-toolchain.cmake $hostdir/ share
+	nativearch ${excl}"MacOSX*.sdk" ${excl}.breakpoints doc bin lib libexec include cget/cget.cmake cget/pkg etc install-crosscompiler.* cross-env.sh *.md $hostcmake native-toolchain.cmake $hostdir/ share
 
 
 	hash="$(sha256sum "$out")"
