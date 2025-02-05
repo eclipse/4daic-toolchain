@@ -46,13 +46,13 @@ cgetdir="$(cd "$(dirname "$0")"; pwd)"
 exe="$cgetdir/${0##*/}"
 
 die() { set +e; cleanup; trap "" EXIT; echo "
-$exe: $*" >&2; exit 1; }
+### ${exe##*/}: $*" >&2; exit 1; }
 trap 'exit="$?"; set +e; cleanup; [ "$exit" = 0 ] || die "Exiting with exit status $exit due to error${pgkname:+ while processing $pkgname}"' EXIT
 trap 'set +e; echo "Exiting due to SIGINT, SIGHUP, or SIGTERM" >&2; cleanup; exit 1' INT TERM HUP
 trap 'set +e; echo "Exiting due to SIGPIPE, SIGIO, or SIGUSR" >&2; cleanup; exit 1' PIPE IO USR 2>/dev/null || true
 
 cleanup() { :; }
-msg() { echo "### $*"; }
+msg() { echo "### [${prefix##*/}] $*"; }
 
 usage() {
 	echo "Usage: $0 [-p <prefix>] {install|remove|list|init|help} [package ...]"
@@ -97,6 +97,35 @@ cmake_build() {
 	compiler_ver="$(compiler_ver || true)"
 	[ -z "$compiler_ver" ] || export CCACHE_COMPILERCHECK="string:$compiler_ver"
 	cmake --build . "$@";
+}
+
+do_log=
+log_cmd() {
+	local step="$1" logfile="$2"
+	shift; shift
+
+	if [ "$do_log" = 1 ]; then
+		counter=0
+		(
+			locks=""
+			set +e
+			"$@"
+			rc="$?"
+			case "$rc" in
+			0) echo "### Finished successfully.";;
+			*) echo "### ERROR! See $logfile for details.";;
+			esac
+			exit "$rc"
+		) 2>&1 | tee "$logfile" | sed -e '/^### /b;s/^\(.\{20\}\).....*\(.\{30\}\)$/\1...\2/g' | while read -r line; do
+		#"$@" 2>&1 | tee "$logfile" | while read line; do
+			echo -n "### [${prefix##*/}] $step ($counter): $line"; echo -ne '\e[0m\e[K\r'
+			counter="$((counter+1))"
+		done
+		echo
+		tail -n 1 "$logfile" | grep "^### Finished successfully.$" > /dev/null
+	else
+		"$@"
+	fi
 }
 
 forbid_separator() {
@@ -151,6 +180,7 @@ parse_cmdline() {
 			-p|--prefix) ensure_toplevel; prefix="$2"; shift 2;;
 			-h|--help) usage;;
 			-v|--verbose) export VERBOSE=1; defs="$defs-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON"; shift;; # works best for makefile builds
+			--log) do_log="1"; shift;;
 			-y|--yes) shift;; # we never ask
 
 			-t|--toolchain) ensure init; init_toolchain="$(abs $2)"; shift 2;;
@@ -291,7 +321,7 @@ install_depends() {
 
 	while read pkg _; do
 		msg "Checking dependency $pkg..."
-		sh "$exe" ${VERBOSE:+-v} -p "$prefix" install "$pkg" -B "$builddir" -G "$generator" "$@"
+		sh "$exe" ${VERBOSE:+-v} ${do_log:+--log} -p "$prefix" install "$pkg" -B "$builddir" -G "$generator" "$@"
 	done < "$pkg_depends"
 }
 
@@ -374,7 +404,7 @@ prepare_build_script() {
 	# directory (into different cget prefixes -- same prefix is useless and
 	# unsupported).
 	need_cleanup=""
-	if [ -n "$buildscript" ]; then
+	if [ -n "$buildscript" -a -d "$pkg_url" ]; then
 		[ -f "$buildscript" ] || die "Build script does not exist: $buildscript"
 
 		lock "${pkg_url%/}"
@@ -415,11 +445,11 @@ cleanup_build() {
 }
 
 cleanup() {
-	cleanup_build_script
+	cleanup_build_script 2>/dev/null
 	while [ -n "$locks" ]; do
 		locks="${locks#}"
 		lock="${locks%%*}"
-		rmdir "$lock"
+		rmdir "$lock" 2>/dev/null
 		locks="${locks#"$lock"}"
 	done
 }
@@ -437,11 +467,19 @@ install() {
 	build_clean=1
 	build
 
-	msg "Installing $pkgname..."
 	cd "$pkgbuilddir/build"
 	prepare_build_script
-	cmake -P cmake_install.cmake || return 1
+
+	log_cmd "Installing $pkgname" "$builddir/$pkgname-install.log" _install_internal
+
 	cleanup_build_script
+	cd "$prefix"
+	cleanup_build "$pkgbuilddir"
+}
+_install_internal() {
+	msg "Installing $pkgname..."
+
+	cmake -P cmake_install.cmake || return 1
 
 	echo >> install_manifest.txt # file is missing trailing newline
 
@@ -449,18 +487,20 @@ install() {
 	while read file; do
 		echo "${file#"$prefix/"}"
 	done < install_manifest.txt > "$pkgdir/$pkgname/install_manifest.txt"
-
-	cd "$prefix"
-	cleanup_build "$pkgbuilddir"
 }
 
 build() {
-	msg "Building $pkgname..."
-
 	cd "$prefix"
 	[ -z "$build_clean" ] || cleanup_build "$pkgbuilddir"
 
 	prepare_source
+
+	log_cmd "Building $pkgname" "$builddir/$pkgname.log" _build_internal
+
+	cleanup_build_script
+}
+_build_internal() {
+	msg "Building $pkgname..."
 
 	mkdir -p "$pkgbuilddir/build"
 	cd "$pkgbuilddir/build"
@@ -482,9 +522,8 @@ build() {
 			return 1
 		fi
 	fi
-	cmake_build ${build_target:+--target "$build_target"}
 
-	cleanup_build_script
+	cmake_build ${build_target:+--target "$build_target"}
 }
 
 remove() {
