@@ -43,7 +43,9 @@ arch="$1"
 toolchain="$toolchains/$arch"
 bin="$2"
 
-[ -f "$bin" -a -f "$toolchain.cmake" -a -d "$toolchain" ] || { echo "Usage: $0 <target> <binary>" >&2; exit 1; }
+[ ! -f "$bin.exe" ] || exit 0 # not supported for windows executables
+[ -f "$bin" -a -f "$toolchain.cmake" ] || { echo "Usage: $0 <target> <binary>" >&2; exit 1; }
+[ -d "$toolchain" ] || toolchain="$toolchains/clang-toolchain"
 
 # find correct tools
 bindir="$(cd "$(dirname "$bin")"; pwd)/bundle"
@@ -53,7 +55,6 @@ gcc="$toolchain/bin/$(ls "$toolchain/bin/" | grep 'gcc$' | head -n 1)"
 
 # check applicability
 if ! "$objdump" -p "$bin" | grep DYNAMIC >/dev/null; then
-	echo "Not a dynamic executable, no packaging needed."
 	exit 0
 fi
 
