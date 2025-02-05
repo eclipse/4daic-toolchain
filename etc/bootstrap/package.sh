@@ -15,7 +15,7 @@
 # Package all currently present build artefacts into the 'dist' directory
 set -e
 
-cd "$(dirname "$0")"/..
+cd "$(dirname "$0")"/../..
 base="$PWD"
 PATH="$PWD/bin"
 
