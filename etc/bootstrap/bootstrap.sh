@@ -93,6 +93,3 @@ cp "${toolchain}/cross-env.sh" "${toolchain}"/install-crosscompiler.* "${toolcha
 
 # install remaining build tools
 cget install busybox gnumake cmake ninja ccache flex byacc git putty python lzip 7zip remake meson patchelf $builddir -G Ninja
-
-# remove useless cmake doc directory
-rm -rf doc
