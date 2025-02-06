@@ -70,7 +70,7 @@ is_windows() { [ "$(uname -s)" = "Windows_NT" ]; }
 sha256sum() { cmake -E sha256sum "$@"; }
 md5sum() { cmake -E md5sum "$@"; }
 extract() { cmake -E tar xf "$@"; }
-downloadfile() { curl -L -k -o "$1" "$2"; }
+downloadfile() { curl -f --progress-bar -L -k -o "$1" "$2"; }
 # make bootstrapping easier
 type curl &> /dev/null || downloadfile() { cmake -Dfile="$1" -DURL="$2" -P "$exe"; }
 
@@ -504,7 +504,6 @@ _build_internal() {
 
 	mkdir -p "$pkgbuilddir/build"
 	cd "$pkgbuilddir/build"
-	msg "Entering '$PWD', source dir '$pkg_url'"
 
 	if [ ! -f CMakeCache.txt -o -n "$build_configure" ]; then
 		set --
