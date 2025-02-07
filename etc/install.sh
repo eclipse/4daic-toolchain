@@ -39,15 +39,15 @@ esac
 
 installer="4diac-fbe-installer-v1-$triplet.tar.gz"
 case "$triplet" in
-aarch64-apple-darwin20.2) installerhash='379a328bc7600ab3f0a4317458725e7fa74423cc8229ee2fc2d89b18308f8275';;
-x86_64-linux-musl) installerhash='8422f798b4d367bbbb4d517368b102ce0a7af8bb0b11e64fca12c86db989ffe8';;
+aarch64-apple-darwin20.2) installerhash='e7baab4ae8cc1c2d32cc7d9f648680132220c15bd3cb935c1f054f61b455ca60';;
+x86_64-linux-musl) installerhash='ec53d55e8aa6217cc7b73c5dd2d7b6fe39643b109248e8570e6287e7e30e9f9e';;
 *) die "System $triplet has no binary releases.";;
 esac
 
 release='2025-01'
 case "$triplet" in
-aarch64-apple-darwin20.2) releasehash='b5134ac20935316b913624877fb72d41d5dcd312fa10a86366fc6a4e345ebafb';;
-x86_64-linux-musl) releasehash='c71c978bb9b8f2363b73598541de270bd3bb8841e80d0a6593bd3c72efb2e21d';;
+aarch64-apple-darwin20.2) releasehash='3c7879d6015b7bc40eafa3ad89278603cb8fcdcc45e8e473b6a2fa41b144b0a0';;
+x86_64-linux-musl) releasehash='00455ee854c469f745879b9568f7e2c3c57cd6e19d4830dfc0c319f95d438a7c';;
 esac
 
 fetch_file_authenticated() {
