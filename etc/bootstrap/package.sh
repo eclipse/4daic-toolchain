@@ -35,46 +35,32 @@ fi
 
 mkdir -p "$dist"
 
-detect_host() {
-	# build archive name from host and target platforms
-	host="$(sh "$base/cross-env.sh" native-toolchain.cmake set | grep -E "^CC=.*-(gcc|clang)'?\$")"
-	host="${host##*/}"
-	host="${host%"'"}"
-	host="${host%-gcc}"
-	host="${host%-clang}"
+detect_triplet() {
+	# build archive name from triplet and target platforms
+	triplet="$(sh "$base/cross-env.sh" native-toolchain.cmake set | grep -E "^CC=.*-(gcc|clang)'?\$")"
+	triplet="${triplet##*/}"
+	triplet="${triplet%"'"}"
+	triplet="${triplet%-gcc}"
+	triplet="${triplet%-clang}"
 
-	case "$host" in
-		*-mingw32) hostos=Windows; hostdir="$host";;
-		*-darwin*) hostos=Darwin; hostdir="clang-toolchain";;
-		*) hostos=Linux; hostdir="$host";;
+	case "$triplet" in
+	*-w64-*)
+		# remove all symlinks from the windows toolchains
+		find *-*-*/ -type l -exec rm {} +
+		script=".cmd"
+		hosttoolchain="$triplet"
+		hostcmake="$triplet.cmake";;
+
+	*-darwin*)
+		script=".sh"
+		hosttoolchain="clang-toolchain"
+		hostcmake="$(echo *-apple*.cmake *-unknown-*-*.cmake)";;
+
+	*)
+		script=".sh"
+		hosttoolchain="$triplet"
+		hostcmake="$triplet.cmake";;
 	esac
-
-	case "$hostos" in
-		Windows)
-			# remove all symlinks from the windows toolchains
-			find *-*-*/ -type l -exec rm {} +
-			installarch="" # not used for windows, always x86_64
-			out="$dist/$hostos-toolchain-"$host".zip"
-			nativearch() { rm -f "$out"; 7za a -Tzip "$out" "$@"; }
-			hostcmake="$host.cmake"
-			excl="-xr!";;
-
-		Darwin)
-			out="$dist/$hostos-toolchain-"$host".tar.gz"
-			installarch="-${host%%-*}"
-			[ "$installarch" != "-aarch64" ] || installarch="-arm64"
-			nativearch() { rm -f "$out"; tar c "$@" | 7za a -Tgzip -si "$out"; }
-			hostcmake="$(echo *-apple*.cmake *-unknown-*-*.cmake)"
-			excl="--exclude=";;
-
-		*)
-			out="$dist/$hostos-toolchain-"$host".tar.gz"
-			installarch="-${host%%-*}"
-			nativearch() { rm -f "$out"; tar c "$@" | 7za a -Tgzip -si "$out"; }
-			hostcmake="$host.cmake"
-			excl="--exclude=";;
-	esac
-
 }
 
 pids=""
@@ -83,17 +69,17 @@ pids=""
 for toolchain in "$base" "$base"/toolchain-*/; do
 	[ -f "$toolchain/native-toolchain.cmake" ] || continue
 	cd "$toolchain"
-	detect_host
+	detect_triplet
 
 	# remove build data
 	rm -rf cget/build
 
 	for i in *-*-*; do
 		[ -f "$i.cmake" ] || continue
-		[ "$i" = "$host" ] && continue
+		[ "$i" = "$triplet" ] && continue
 		target="${i%/}"
 		target="${target##*/}"
-		out="$dist/$hostos-cross-${host%%-*}_$target.tar.lz"
+		out="$dist/${triplet}_cross_$target.tar.lz"
 		if [ ! -f "$out" -o "$1" = "-f" ]; then
 			(
 			echo "Packaging $target..."
@@ -106,9 +92,9 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 	done
 
 	rm -rf clang-toolchain/bootstrap clang-toolchain/lib/*.a
-	if [ -d clang-toolchain -a "$hostos" != "Darwin" ]; then
+	if [ -d clang-toolchain -a "$hosttoolchain" != "clang-toolchain" ]; then
 		target=clang-toolchain
-		out="$dist/$hostos-cross-${host%%-*}_clang.tar.lz"
+		out="$dist/${triplet}_cross_clang.tar.lz"
 		if [ ! -f "$out" -o "$1" = "-f" ]; then
 			(
 			echo "Packaging $target..."
@@ -127,14 +113,12 @@ done
 
 # generate checksums to include them in base toolchain archive
 cd "$base"
-sha256sum "release-$release"/*.tar.lz > etc/crosscompilers.sha256sum
-
-# reset checksums to dummy value in install scripts so that release tarballs have predictable content
-cd "$base/etc"
-sed -i -e "s/release='.*'/release='unknown'/;s/hash='[0-9a-f]\{64\}'/hash='ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'/" install-*.*
-for i in install-*.*; do
-	cp "$i" "$dist/4diac-toolchain-$release-$i"
-done
+sha256sum "release-$release"/*_cross_*.tar.lz > etc/crosscompilers.sha256sum.new
+if diff -q etc/crosscompilers.sha256sum etc/crosscompilers.sha256sum.new >/dev/null; then
+	rm etc/crosscompilers.sha256sum.new
+else
+	mv etc/crosscompilers.sha256sum.new etc/crosscompilers.sha256sum
+fi
 
 pids=""
 # package base toolchains
@@ -142,17 +126,20 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 	[ -f "$toolchain/native-toolchain.cmake" ] || continue
 	(
 	cd "$toolchain"
-	detect_host
-	echo "Packaging native $host toolchain and tools..."
+	detect_triplet
+	echo "Packaging native $triplet toolchain and tools..."
 
-	cp "$base"/etc/install-*.* "$base/etc/crosscompilers.sha256sum" "etc" || true
-	nativearch ${excl}"MacOSX*.sdk" ${excl}.breakpoints doc bin lib libexec include cget/cget.cmake cget/pkg etc install-crosscompiler.* cross-env.sh *.md $hostcmake native-toolchain.cmake $hostdir/ share
+	if [ "$toolchain" != "$base" ]; then
+		cp -a "$base"/etc "$base"/doc "$base"/*.md "$base"/*.sh "$base"/*.cmd .
+	fi
+	out="$dist/$triplet-toolchain.tar.lz"
+	tar c --exclude="MacOSX*.sdk" --exclude=.breakpoints --exclude=install.sh --exclude=install.cmd doc bin lib libexec include cget/cget.cmake cget/pkg etc install-crosscompiler.* cross-env.sh *.md $hostcmake native-toolchain.cmake "$hosttoolchain/" share | lzip > "$out"
 
 
 	hash="$(sha256sum "$out")"
 	hash="${hash%% *}"
 
-	sed -i -e "s/release='.*'/release='$release'/;s/hash='[0-9a-f]\{64\}'/hash='$hash'/" "$dist/4diac-toolchain-$release-install-$hostos$installarch".*
+	sed -i -e "s/release='.*'/release='$release'/;s/\\(\\($triplet) \\|\\$\\)releasehash\\)='[0-9a-f]\\{64\\}'/\\1='${hash%% *}'/" "$dist/4diac-toolchain-$release-install$script"
 	) &
 	pids="$pids $!"
 done
@@ -163,7 +150,7 @@ done
 
 # update installer scripts in base repo so that final checksums can be committed to git
 cd "$base/etc"
-for i in install-*.*; do
+for i in install.*; do
 	cp "$dist/4diac-toolchain-$release-$i" "$i"
 done
 

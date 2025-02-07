@@ -76,7 +76,7 @@ file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/config.mak
   "COMMON_CONFIG += CFLAGS='${CMAKE_C_FLAGS}' CXXFLAGS='${CMAKE_CXX_FLAGS}' LDFLAGS='${CMAKE_EXE_LINKER_FLAGS}' $(COMPILER)\n"
   "COMMON_CONFIG += --with-debug-prefix-map=$(CURDIR)= --disable-nls --disable-shared --enable-deterministic-archives\n"
   "GCC_CONFIG += --enable-languages=c,c++ --disable-libquadmath --disable-decimal-float --disable-multilib ${MCPU}\n"
-  "DL_CMD = curl -k -o\n"
+  "DL_CMD = curl -Lk -f --progress-bar -o\n"
 )
 
 include(ProcessorCount)
