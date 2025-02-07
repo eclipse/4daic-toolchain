@@ -19,7 +19,7 @@ if ("$PWD" -match ".*\\etc$") {
 if (-not (Test-Path "bin\sh.exe")) {
 	$baseurl = "https://sourceforge.net/projects/fordiac/files/4diac-fbe"
 	$release='2025-01'
-	$releasehash='87a492b722659fd1d479d451f30583f2c10e1aec537c87e51b68de9fac7fddea'
+	$releasehash='db64ce7b7a5cbb1ba7919c502f7318779447f7c5fca6fac0f750c7d1de5af4fd'
 
 	$triplet="x86_64-w64-mingw32"
 	$downloaddir="$Env:CGET_DOWNLOADS_DIR"
@@ -27,7 +27,7 @@ if (-not (Test-Path "bin\sh.exe")) {
 		$downloaddir="$PWD"
 	}
 	$installer="4diac-fbe-installer-v1-$triplet.zip"
-	$installerhash='d748deed5f673b20a913be3fd148be5b441cd7697ea62c0741d0607eaceedbde'
+	$installerhash='c2cb45de2b0bf0d1954152c136f697353929a7ba95ab55a89cfda5e668b8ebd5'
 	if (-not (Test-Path "$downloaddir\$installer")) {
 		$downloaddir="$Env:CGET_CACHE_DIR"
 		if ("$downloaddir" -eq "") {
