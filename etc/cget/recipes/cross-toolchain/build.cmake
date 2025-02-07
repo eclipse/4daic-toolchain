@@ -108,7 +108,7 @@ file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/config.mak
   "COMMON_CONFIG += --disable-gprofng --disable-gcov\n"
   "GCC_CONFIG += --enable-languages=c,lto,c++ --disable-multilib $(MCPU)\n"
   "GCC_CONFIG += --enable-libatomic --enable-threads=posix --enable-graphite --enable-libstdcxx-filesystem-ts=yes --disable-libstdcxx-pch --disable-lto --disable-win32-registry --disable-symvers --disable-plugin --disable-werror --disable-rpath --with-gnu-as --with-gnu-ld --disable-sjlj-exceptions --with-dwarf2 --enable-large-address-aware\n"
-  "DL_CMD = curl -Lk -o\n"
+  "DL_CMD = curl -Lk -f --progress-bar -o\n"
   "PATH:=$ENV{PATH}:${CMAKE_CURRENT_SOURCE_DIR}:${TOOLCHAINS_ROOT}/\$(TARGET)/bin\n"
 )
 

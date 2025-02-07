@@ -7,7 +7,7 @@
 # http://www.eclipse.org/legal/epl-2.0.
 #
 # SPDX-License-Identifier: EPL-2.0
-# 
+#
 # Contributors:
 #    Jörg Walter - initial implementation
 # *******************************************************************************/
@@ -31,7 +31,7 @@
 #
 # This script implements the third solution, despite its noticeable drawback.
 # Unfortunately, the other two variants have proven to be unreliable in
-# various corner cases. 
+# various corner cases.
 #
 
 [ "$1" = "native-toolchain" ] && exit 0
@@ -50,7 +50,7 @@ bin="$2"
 # find correct tools
 bindir="$(cd "$(dirname "$bin")"; pwd)/bundle"
 PATH="$toolchains/bin"
-objdump="$toolchain/bin/$(ls "$toolchain/bin/" | grep 'objdump$' | head -n 1)"
+objdump="$toolchain/bin/$(ls "$toolchain/bin/" | grep -E 'objdump(\.exe)?$' | head -n 1)"
 gcc="$toolchain/bin/$(ls "$toolchain/bin/" | grep 'gcc$' | head -n 1)"
 
 # check applicability

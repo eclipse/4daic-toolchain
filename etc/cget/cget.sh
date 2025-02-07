@@ -7,7 +7,7 @@
 # http://www.eclipse.org/legal/epl-2.0.
 #
 # SPDX-License-Identifier: EPL-2.0
-# 
+#
 # Contributors:
 #    Jörg Walter - initial implementation
 # *******************************************************************************/
@@ -70,7 +70,7 @@ is_windows() { [ "$(uname -s)" = "Windows_NT" ]; }
 sha256sum() { cmake -E sha256sum "$@"; }
 md5sum() { cmake -E md5sum "$@"; }
 extract() { cmake -E tar xf "$@"; }
-downloadfile() { curl -f --progress-bar -L -k -o "$1" "$2"; }
+downloadfile() { COLUMNS=60 curl -f --progress-bar -L -k -o "$1" "$2"; }
 # make bootstrapping easier
 type curl &> /dev/null || downloadfile() { cmake -Dfile="$1" -DURL="$2" -P "$exe"; }
 
@@ -78,7 +78,7 @@ if is_windows; then
 	# on windows, sometimes some filesystem operations keep files locked after the corresponding program exited, so retry a few times.
 	workaround_fslock() {
 		local count=0
-		while [ "$count" -lt 10 ] && ! "$@"; do 
+		while [ "$count" -lt 10 ] && ! "$@"; do
 			sleep 1;
 			count="$((count+1))"
 		done
@@ -105,6 +105,7 @@ log_cmd() {
 	shift; shift
 
 	if [ "$do_log" = 1 ]; then
+		echo "### [${prefix##*/}] $step...";
 		counter=0
 		(
 			locks=""
@@ -116,10 +117,17 @@ log_cmd() {
 			*) echo "### ERROR! See $logfile for details.";;
 			esac
 			exit "$rc"
-		) 2>&1 | tee "$logfile" | sed -e '/^### /b;s/^\(.\{20\}\).....*\(.\{30\}\)$/\1...\2/g' | while read -r line; do
-		#"$@" 2>&1 | tee "$logfile" | while read line; do
-			echo -n "### [${prefix##*/}] $step ($counter): $line"; echo -ne '\e[0m\e[K\r'
+		) 2>&1 | tee "$logfile" | while read -r line; do
 			counter="$((counter+1))"
+			if [ "${line:0:4}" = "### " ]; then
+				printf "### %5i: %s" "$counter" "$line"
+			elif [ "${#line}" -gt 64 ]; then
+				# this is not POSIX sh syntax, but our busybox sh supports it
+				printf "### %5i: %s" "$counter" "${line:0:20}...${line:$((${#line}-40)):40}"
+			else
+				printf "### %5i: %s" "$counter" "$line"
+			fi
+			echo -ne '\e[0m\e[K\r'
 		done
 		echo
 		tail -n 1 "$logfile" | grep "^### Finished successfully.$" > /dev/null

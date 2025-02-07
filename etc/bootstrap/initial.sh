@@ -96,7 +96,7 @@ _fetch_file() {
 	download="$cachedir/sha256-$hash/$file"
 	if [ ! -f "$download" ]; then
 		mkdir -p "${download%/*}"
-		if type curl >/dev/null && curl --location --disable --insecure -o "$download" "$url"; then
+		if type curl >/dev/null && COLUMNS=60 curl -f --progress-bar --location --disable --insecure -o "$download" "$url"; then
 			: # obvious tool
 		elif type wget >/dev/null && wget --no-check-certificate -O "$download" "$url"; then
 			: # obvious tool
