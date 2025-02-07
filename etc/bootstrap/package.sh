@@ -63,6 +63,20 @@ detect_triplet() {
 	esac
 }
 
+# reproducible archives
+rtar() {
+	local out="$1"
+	shift
+	env TZ=UTC LC_ALL=C /usr/bin/tar c \
+		--sort=name --format=posix \
+		--pax-option=exthdr.name=%d/PaxHeaders/%f \
+		--pax-option=delete=atime,delete=ctime \
+		--mtime=2024-01-01\ 00:00:00 \
+		--numeric-owner --owner=0 --group=0 \
+		--mode=go+u,go-w "$@" \
+		| lzip --best > "$out"
+}
+
 pids=""
 
 # package cross-compilers first, so that we can build the SHA256 checksum file
@@ -83,7 +97,7 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 		if [ ! -f "$out" -o "$1" = "-f" ]; then
 			(
 			echo "Packaging $target..."
-			tar c "$target.cmake" "$target" | lzip > "$out"
+			rtar "$out" "$target.cmake" "$target"
 			) &
 			pids="$pids $!"
 		else
@@ -98,7 +112,7 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 		if [ ! -f "$out" -o "$1" = "-f" ]; then
 			(
 			echo "Packaging $target..."
-			tar c *-unknown-linux-*.cmake *-apple-*.cmake "$target" --exclude "MacOSX*.sdk" | lzip > "$out"
+			rtar "$out" --exclude "MacOSX*.sdk" *-unknown-linux-*.cmake *-apple-*.cmake "$target"
 			) &
 			pids="$pids $!"
 		else
@@ -133,13 +147,13 @@ for toolchain in "$base" "$base"/toolchain-*/; do
 		cp -a "$base"/etc "$base"/doc "$base"/*.md "$base"/*.sh "$base"/*.cmd .
 	fi
 	out="$dist/$triplet-toolchain.tar.lz"
-	tar c --exclude="MacOSX*.sdk" --exclude=.breakpoints --exclude=install.sh --exclude=install.cmd doc bin lib libexec include cget/cget.cmake cget/pkg etc install-crosscompiler.* cross-env.sh *.md $hostcmake native-toolchain.cmake "$hosttoolchain/" share | lzip > "$out"
+	rtar "$out" --exclude="MacOSX*.sdk" --exclude=.breakpoints --exclude=install.sh --exclude=install.cmd doc bin lib libexec include cget/cget.cmake cget/pkg etc install-crosscompiler.* cross-env.sh *.md $hostcmake native-toolchain.cmake "$hosttoolchain/" share
 
 
 	hash="$(sha256sum "$out")"
 	hash="${hash%% *}"
 
-	sed -i -e "s/release='.*'/release='$release'/;s/\\(\\($triplet) \\|\\$\\)releasehash\\)='[0-9a-f]\\{64\\}'/\\1='${hash%% *}'/" "$dist/4diac-toolchain-$release-install$script"
+	sed -i -e "s/release='.*'/release='$release'/;s/\\(\\($triplet) \\|\\$\\)releasehash\\)='[0-9a-f]\\{64\\}'/\\1='${hash%% *}'/" "$base/etc/install$script"
 	) &
 	pids="$pids $!"
 done
@@ -148,9 +162,8 @@ for id in $pids; do
 	wait -n $pids
 done
 
-# update installer scripts in base repo so that final checksums can be committed to git
 cd "$base/etc"
 for i in install.*; do
-	cp "$dist/4diac-toolchain-$release-$i" "$i"
+	cp "$i" "$dist/4diac-toolchain-$release-$i"
 done
 

@@ -15,7 +15,7 @@
 # Package all currently present build artefacts into the 'dist' directory
 set -e
 
-if [ -n "$1" ]; then
+if [ -n "$1" -a "$1" != "-f" ]; then
 	echo "Usage: $0" >&2
 	exit 1
 fi
@@ -31,10 +31,31 @@ hosttriplet="${hosttriplet%%-gcc*}"
 
 installer="$output/4diac-fbe-installer-v1"
 
-if [ -f "$installer-$hosttriplet.tar.gz" ]; then
+if [ -f "$installer-$hosttriplet.tar.gz" -a "$1" != "-f" ]; then
 	echo "Installer $installer already exists. Edit $0 to create a new version."
 	exit 1
 fi
+
+# reproducible archives
+rzip() {
+	local out="$1"
+	shift
+	/usr/bin/touch -d 2024-01-01T00:00:00Z "$@"
+	TZ=UTC /usr/bin/zip -r -oX - "$@" > "$out"
+}
+
+rtar() {
+	local out="$1"
+	shift
+	env TZ=UTC LC_ALL=C /usr/bin/tar c \
+		--sort=name --format=posix \
+		--pax-option=exthdr.name=%d/PaxHeaders/%f \
+		--pax-option=delete=atime,delete=ctime \
+		--mtime=2024-01-01\ 00:00:00 \
+		--numeric-owner --owner=0 --group=0 \
+		--mode=go+u,go-w "$@" \
+		| /usr/bin/gzip --no-name --best > "$out"
+}
 
 for dir in bin toolchain-*/bin; do
 	cd "$base/${dir%bin}"
@@ -46,19 +67,19 @@ for dir in bin toolchain-*/bin; do
 		cp -a "$base/etc/bootstrap/install.sh" etc/bootstrap/install.sh
 		exe=".exe"
 		script=".cmd"
-		archive="7za a -Tzip -mtc=off"
+		archive="rzip"
 		ext=".zip";;
 	bin)
 		triplet="$hosttriplet"
 		exe=""
 		script=".sh"
-		archive="tar czf"
+		archive="rtar"
 		ext=".tar.gz";;
 	*)
 		cp -a "$base/etc/bootstrap/install.sh" etc/bootstrap/install.sh
 		exe=""
 		script=".sh"
-		archive="tar czf"
+		archive="rtar"
 		ext=.tar.gz;;
 	esac
 	file="$installer-$triplet$ext"
